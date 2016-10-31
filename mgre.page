@@ -1,0 +1,24 @@
+Multipoint GRE is a kind of GRE allowing for several p2p tunnels to be routed over one GRE interface.
+
+On Linux such a tunnel can be added with:
+
+`ip tunnel add mgre0 mode gre ttl 64 local 1.2.3.4`
+
+A few things to note here:
+- We do not specifiy a remote. This way the kernel will try to match all GRE packets to this interface
+- We specify a local endpoint. This is not strictly necessary however you will get an error add tunnel "gre0" failed: File exists if you don't. See below for an explanation.
+- A TTL of 64 or higher is necessary for Link-Local Multipoint to work.
+
+
+### `add tunnel "gre0" failed: File exists`
+
+The Linux GRE implementation is based on filters.
+Filters include:
+- The recipient IP (local)
+- The senders' IP (remote)
+- Wether or not a Checksum is present
+- The key
+
+The Interface gre0 appearing when you add a GRE tunnel has none of these filters set.
+If you do not specify any of those filters either the Kernel has no way of deciding to which interface to send the packet.
+Thus it errors if you try to add an interface without filters.
