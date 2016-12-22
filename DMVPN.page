@@ -38,16 +38,6 @@ the receiving spoke.
 This shortcut route is kept alive for several hours after traffic ceases so within that
 timeframe new connections are established directly without relying on the core again.
 
-## Terminology
-
-NHRP: The Next Hop Resolution Protocol, defined in RFC 2332
-
-NBMA: Non-Broadcast Multi-Access (network), described in RFC 2332. The Internet is an
-example of a NBMA network.
-
-GRE: General Routing Encapsulation, defined in RFC 1701
-
-
 # Long Overview
 
 This overview will go into much more depth. It is written with a network administrator in
@@ -126,6 +116,24 @@ to how IPsec tunnel mode does. However GRE plays much nicer with NHRP.
 Plabs does not use any optional features at this moment, so the overhead from
 GRE is merely 4 octets / 32 bits.^[[RFC2784](https://tools.ietf.org/html/rfc2784#section-2.1)]
 
+### mGRE
+
+multipoint GRE (mGRE) is a tiny expansion to the idea of GRE. Usually GRE is a
+point to point connection. You have two hosts directly sending packets
+encapsulated using GRE to each other.
+
+However you can use GRE without specifying a remote endpoint. In that case the
+GRE interface becomes a basically layer2 interface which needs some additional
+information to send packets to the correct endpoint - namely the neighbor table.
+
+In Linux the neighbor table for Ethernet devices holds a simple mapping of IEEE
+802 MAC addresses to IP addresses, populated using ARP.
+If a packet is to be sent to an IP address the neighbor table is consulted
+first, checking if the MAC address of that IP is known. If so the packet is
+directly sent to that neighbor. If not the routing table is consulted for the
+next hop.
+
+
 ## NBMA Next Hop Resolution Protocol (NHRP)
 
 NHRP is one of the more crucial parts of the system since it is responsible for
@@ -185,7 +193,8 @@ If now C1 wants to sent a packet to C2 it will send a `resolution request` with
 C2's **tunnel** address (`10.0.0.3`) to S.
 S looks up this address in its mapping table and find out C2's global address:
 `3.3.3.3`
-It sends this information back to C1 who enters it into it's neighbor table.
+It sends a `resolution reply` with this information back to C1 who enters it
+into it's neighbor table.
 
 C1 can now send packets to C2: It will call it's network stack with a packet to
 `10.0.0.3`, which will look into the neighbor table and find out that the global
@@ -196,5 +205,14 @@ I would like to refer back to the section about GRE to make its role in Plabs
 more obvious: It is the encapsulation protocol used there.
 
 
+### Desist, or dynamic Spoke-Spoke connection
 
+If you compare the above example and the short overview you will find a lot of
+similarities, in fact they are mostly the same.
 
+DESIST is in reality not much more than a tab of hotsnot holding the whole together.
+It's main job is to set up the IPsec Connections between spokes after a
+resolution reply has been received.
+
+After that step packets can be sent from one spoke to another and from there on
+the dynamic routing protocol takes over.
