@@ -64,8 +64,9 @@ authenticated using *handwavy* IPsec using StrongSWAN.
 ### Crypto
 
 Two different transportation ciphers are available:
-- ChaCha20-Poly1305 
-- 256 bit AES in Galois/Counter Mode using a 128 bit ICV
+
+ - ChaCha20-Poly1305 
+ - 256 bit AES in Galois/Counter Mode using a 128 bit ICV
 
 Generally speaking both are of similar security, however ChaCha20 is much faster
 than AES in pure software, often even coming close to AES using native
@@ -84,8 +85,9 @@ done to eventually replace DH with NTRU.
 ### IPsec modes
 
 IPsec knows two different modes of operation:
-- Tunnel mode
-- Transport mode
+
+ - Tunnel mode
+ - Transport mode
 
 Transport mode is the simpler one; it simply encrypts the packet's payload,
 MAC's the result and sends both in a packet using the same header.
