@@ -1,0 +1,136 @@
+---
+format: markdown
+title: Dynamic Multipoint VPN (DMVPN)
+...
+# Dynamic Multipoint VPN (DMVPN)
+
+According to
+[Wikipedia](https://en.wikipedia.org/wiki/Dynamic_Multipoint_Virtual_Private_Network):
+"Dynamic Multipoint Virtual Private Network is a dynamic tunneling form of a virtual
+private network supported on Cisco IOS-based routers, Huawei AR G3 routers and USG
+firewalls, and on Unix-like operating systems"
+
+
+## Short Overview
+
+A DMVPN can be described (somewhat inaccurately) as an "on-demand mesh".
+Its operation can be simplified as such:
+
+A machine willing to join the DMVPN - from now on referred to as 'spoke' - first connects
+to the hub(s) of the DMVPN. A Hub is simply a statically configured machine with a static
+IP, in the case of Plabs simply all servers listed in `dig +short hub.paranoidlabs.org`.
+
+At this stage if a packet is sent to any host reachable via the DMVPN it is sent to the
+Hub which will forward it to the actual destination, meaning at this point the whole
+network is connected.
+
+At the same time however the sending spoke will try to create a shortcut so it doesn't
+have to forward packets via the core unless necessary.
+If a hub determines that a shortcut route is possible, that is the packets are forwarded
+to another spoke on this DMVPN, it will send the global IP adress of the destination spoke
+to the sending spoke.
+
+Having received that information the sending spoke will try to set up a direct IPsec
+connection to the receiving spoke and, if successful, insert that spoke into its neighbor
+table meaning that packages previously forwarded over the core are now sent directly to
+the receiving spoke.
+
+This shortcut route is kept alive for several hours after traffic ceases so within that
+timeframe new connections are established directly without relying on the core again.
+
+## Terminology
+
+NHRP: The Next Hop Resolution Protocol, defined in RFC 2332
+
+NBMA: Non-Broadcast Multi-Access (network), described in RFC 2332. The Internet is an
+example of a NBMA network.
+
+GRE: General Routing Encapsulation, defined in RFC 1701
+
+
+# Long Overview
+
+This overview will go into much more depth. It is written with a network administrator in
+mind and references the above mentioned RFCs heavily.
+It is also written in the context of Plabs and will sometimes blur the lines
+between technologies and implementations.
+
+## IPsec
+
+Every packet sent over the internet is not send in plain text but encrypted and
+authenticated using *handwavy* IPsec using StrongSWAN.
+
+
+### Crypto
+
+Two different transportation ciphers are available:
+- ChaCha20-Poly1305 
+- 256 bit AES in Galois/Counter Mode using a 128 bit ICV
+
+Generally speaking both are of similar security, however ChaCha20 is much faster
+than AES in pure software, often even coming close to AES using native
+instructions.^[https://www.imperialviolet.org/2014/02/27/tlssymmetriccrypto.html]
+
+Since both of those ciphers are AEAD we don't require additional integrity
+checking or authentication of packets.
+
+IKEv2 includes a pseudo-random function for which we use HMAC with either SHA384
+or SHA256.
+
+KEX is done using ECDHE over the Brainpool 384 curves, however there is work
+done to eventually replace DH with NTRU.
+
+
+### IPsec modes
+
+IPsec knows two different modes of operation:
+- Tunnel mode
+- Transport mode
+
+Transport mode is the simpler one; it simply encrypts the packet's payload,
+MAC's the result and sends both in a packet using the same header.
+
+Tunnel mode comes closer to what people expect of a VPN, here the original
+packet is encrypted and MAC'ed in its entirety and then packet into another
+packet which is send to the receiving end.
+
+The dis- and advantages of both methods are quite obvious: Transport mode is
+much more efficient with it's data however does not protect the header
+information.
+
+Tunnel mode has a higher overhead however it has the huge advantage of making
+the header information changable, allowing for for example different IPs inside
+the tunnel compared to outside of it.
+
+We use Transport mode in combination with GRE in Plabs' DMVPN because it
+provides us with a superset of possibilities compared to Tunnel mode:
+For one every type of packet with an
+[ethertype](https://en.wikipedia.org/wiki/EtherType) can be encapsulated but we
+can also handle IPmc^[IP Multicast] easily.
+
+On that topic though,
+## GRE
+
+GRE Packet Structure:
+
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|C| |K|S| Reserved0       | Ver |         Protocol Type         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|      Checksum (optional)      |       Reserved1 (Optional)    |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Key (optional)                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                 Sequence Number (Optional)                    |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+The C, K & S bits are set if Checksum and Reserved1, Key or Sequence Number are
+included, respectively.
+
+Protocol type gives the EtherType of the encapsulated packet.
+
+Plabs does not use any of the optional features at this moment, so the overhead
+from GRE is merely 4 octets / 32 bits.
