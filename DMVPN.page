@@ -78,7 +78,7 @@ IKEv2 includes a pseudo-random function for which we use HMAC with either SHA384
 or SHA256.
 
 KEX is done using ECDHE over the Brainpool 384 curves, however there is work
-done to eventually replace DH with NTRU.
+done to eventually replace DH with NTRU (a PQC^[Post Quantum Cryptography] alternative).
 
 
 ### IPsec modes
