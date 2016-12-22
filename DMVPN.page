@@ -109,6 +109,7 @@ For one every type of packet with an
 can also handle IPmc^[IP Multicast] easily.
 
 On that topic though,
+
 ## GRE
 
 GRE Packet Structure:
