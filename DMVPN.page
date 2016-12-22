@@ -80,7 +80,7 @@ or SHA256.
 
 KEX is done using ECDHE^[Ecliptic Curve Diffie-Hellman exchange with Epheral keys]
 over the Brainpool 384 curves, however there is work
-done to eventually replace DH with NTRU (a PQC^[Post Quantum Cryptography] alternative).
+done to eventually replace DH with [NTRU](https://en.wikipedia.org/wiki/NTRU), a PQC^[Post Quantum Cryptography] alternative to DH.
 
 
 ### IPsec modes
@@ -114,28 +114,87 @@ can also handle IPmc^[IP Multicast] easily.
 On that topic though,
 
 
-## GRE
+## Generic Routing Encapsulation (GRE)
 
-GRE Packet Structure:
+GRE is a protocol used to encapsulate packets of one type in packets of another type.
 
-```
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|C| |K|S| Reserved0       | Ver |         Protocol Type         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|      Checksum (optional)      |       Reserved1 (Optional)    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         Key (optional)                        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                 Sequence Number (Optional)                    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-```
+In our case we encapsulate IPv4 and IPv6^[[Plabs6]()] in IPv4 or IPv6 (Public Internet).
 
-The C, K & S bits are set if Checksum and Reserved1, Key or Sequence Number are
-included, respectively.
+This allows us to have different tunnel addresses to global addresses - similar
+to how IPsec tunnel mode does. However GRE plays much nicer with NHRP.
 
-Protocol type gives the EtherType of the encapsulated packet.
+Plabs does not use any optional features at this moment, so the overhead from
+GRE is merely 4 octets / 32 bits.^[[RFC2784](https://tools.ietf.org/html/rfc2784#section-2.1)]
 
-Plabs does not use any of the optional features at this moment, so the overhead
-from GRE is merely 4 octets / 32 bits.
+## NBMA Next Hop Resolution Protocol (NHRP)
+
+NHRP is one of the more crucial parts of the system since it is responsible for
+setting up the Spoke-Spoke connections.
+
+NHRP as described in [RFC 2332](https://tools.ietf.org/html/rfc2332) is
+protocol-agnostic, however in the current usecase we use it with IPv4/IPv4 only.
+
+In short, NHRP solves the same problem as ARP, however without relying on
+Broadcasting.
+If you are very familiar with the operation of ARP you may skip the next
+paragraph, otherwise read on.
+
+ARP, the Address Resolution Protocol, works by sending messages to the broadcast
+address - that is send ethernet packets with a target MAC of `ff:ff:ff:ff:ff:ff`.
+These messages allow parties on the same broadcast domain (i.e. the same
+switched network) to efficiently populate a table storing MAC<->IP pairs.
+If you want to go into further detail read the
+[Wikipedia page](https://en.wikipedia.org/wiki/Address_Resolution_Protocol) and the
+[ARP RFC](https://tools.ietf.org/html/rfc826).
+
+This method works well if you have the ability to broadcast.
+If you however find yourself in a network not capable of broadcasting - be it
+X.25 or Frame Relay or SMDS or ATM, you will not be able to use ARP.
+It should be noted at this point that while IP itself does support Broadcast -
+`255.255.255.255` is the global broadcast address - you won't find a router
+actually passing broadcast packets on so the Internet itself does *not* support
+broadcasts.
+
+Non-Broadcast Multi-Access (NBMA) networks are a generalization of said
+networks. They are differenciated from Broadcast Multi-Access (BMA) networks such
+as a switched LAN and Point-to-Point (P2P) networks such as PPP.
+
+NHRP knows of two types of instances:
+
+1. Next Hop Clients (NHC) who send requests
+2. Next Hop Servers (NHS) who send responses
+
+A machine may be both NHC and NHS.
+
+Let's showcase an example situation where NHRP is used. In this example we will
+encapsulate IPv4 in IPv4 as you commonly find in VPNs.
+Furthermore in this environment there are no NATs or similar in the way.
+
+There are two NHC C1 and C2 with the (global) IP-Addresses 2.2.2.2 and 3.3.3.3
+and the tunnel-addresses 10.0.0.2 and 10.0.0.3.
+
+There is an additional machine S with the global IP-Address 1.1.1.1 which acts
+as NHS.
+Both Clients are configured with this NHS.
+
+On bootup both C1 and C2 connect to S and register themselves with both their
+global and tunnel addresses - allowing S to create two mappings
+2.2.2.2<->10.0.0.2 and 3.3.3.3<->10.0.0.3.
+
+If now C1 wants to sent a packet to C2 it will send a `resolution request` with
+C2's **tunnel** address (`10.0.0.3`) to S.
+S looks up this address in its mapping table and find out C2's global address:
+`3.3.3.3`
+It sends this information back to C1 who enters it into it's neighbor table.
+
+C1 can now send packets to C2: It will call it's network stack with a packet to
+`10.0.0.3`, which will look into the neighbor table and find out that the global
+address of that host is `3.3.3.3`; it will then ecapsulate the original packet
+in a new packet to `3.3.3.3` and send it on the global interface.
+
+I would like to refer back to the section about GRE to make its role in Plabs
+more obvious: It is the encapsulation protocol used there.
+
+
+
+
