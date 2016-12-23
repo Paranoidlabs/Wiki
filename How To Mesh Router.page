@@ -5,10 +5,10 @@
 ### Packages
 The required packages are:
 
-1. [Strongswan](https://stew.paranoidlabs.org/strongswan-5.5.1-1-x86_64.pkg.tar.xz)
-2. [OpenNHRP](https://stew.paranoidlabs.org/opennhrp-0.14-1-x86_64.pkg.tar.xz)
+#. [Strongswan](https://stew.paranoidlabs.org/strongswan-5.5.1-1-x86_64.pkg.tar.xz)
+#. [OpenNHRP](https://stew.paranoidlabs.org/opennhrp-0.14-1-x86_64.pkg.tar.xz)
   * You also need [desist](https://github.com/Dean4Devil/desist), however that is not available as a package at the moment
-3. [Bird](https://www.archlinux.org/packages/extra/x86_64/bird/)
+#. [Bird](https://www.archlinux.org/packages/extra/x86_64/bird/)
 
 
 Strongswan and OpenNHRP are also available from the plabs repository
@@ -27,30 +27,30 @@ Download the attached `swanctl.conf` and `hub-common.conf` and drop them into yo
 
 ### Certificates
 
-1. Download the `RootCA`, `IntermediateCA` and `TechnologyCA` -Certificates from [pki.paranoidlabs.org](https://pki.paranoidlabs.org) and drop them into `/etc/swanctl/x509ca/`.
-2. Download the `revoc.crt` and drop it into `/etc/swanctl/x509/`.
-3. Rename your machine certificate to `mesh.der` and drop it into `/etc/swanctl/x509/`.
-4. Drop your machine private key into either `/etc/swanctl/ecdsa/` or `/etc/swanctl/rsa/`, depending on it's type (if you are not sure which type you have, its most likely ECDSA).
+#. Download the `RootCA`, `IntermediateCA` and `TechnologyCA` -Certificates from [pki.paranoidlabs.org](https://pki.paranoidlabs.org) and drop them into `/etc/swanctl/x509ca/`.
+#. Download the `revoc.crt` and drop it into `/etc/swanctl/x509/`.
+#. Rename your machine certificate to `mesh.der` and drop it into `/etc/swanctl/x509/`.
+#. Drop your machine private key into either `/etc/swanctl/ecdsa/` or `/etc/swanctl/rsa/`, depending on it's type (if you are not sure which type you have, its most likely ECDSA).
 
 
 ## Setting up OpenNHRP
 
-1. Download the attached opennrhp.conf and drop it into `/etc/opennhrp/`.
+#. Download the attached opennrhp.conf and drop it into `/etc/opennhrp/`.
 
 ### Desist
 
-1. Clone desist's repository
-2. If you do not have clang installed, change the first line of the Makefile into `CC = gcc`
-3. Compile using `make`
-4. Move the created binary `desist` to `/etc/opennhrp/opennhrp-script`, replacing the existing script.
+#. Clone desist's repository
+#. If you do not have clang installed, change the first line of the Makefile into `CC = gcc`
+#. Compile using `make`
+#. Move the created binary `desist` to `/etc/opennhrp/opennhrp-script`, replacing the existing script.
 
 ### Systemd
 If you are using systemd, download the attached `opennrhp.service` and place it into `/etc/systemd/system/` (If you are using a more recent version of the OpenNHRP package it may come with a service file already - in that case *please* inform an admin to update this page.)
 
 ## Setting up Bird
 
-1. Download the attached `bird.conf` and move it to `/etc/bird.conf`
-2. **Change your Router ID!** Otherwise stuff **will** break and it will do so horribly.
-3. Change interface names if necessary.
+#. Download the attached `bird.conf` and move it to `/etc/bird.conf`
+#. **Change your Router ID!** Otherwise stuff **will** break and it will do so horribly.
+#. Change interface names if necessary.
 
 You can then set up additional dynamic routing, however this is out of the scope of this document.

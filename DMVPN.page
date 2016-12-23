@@ -169,8 +169,8 @@ as a switched LAN and Point-to-Point (P2P) networks such as PPP.
 
 NHRP knows of two types of instances:
 
-1. Next Hop Clients (NHC) who send requests
-2. Next Hop Servers (NHS) who send responses
+#. Next Hop Clients (NHC) who send requests
+#. Next Hop Servers (NHS) who send responses
 
 A machine may be both NHC and NHS.
 
