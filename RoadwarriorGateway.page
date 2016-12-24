@@ -44,3 +44,8 @@ updown = /usr/lib/strongswan/plabs_updown
 ```
 
 in your `children` section.
+
+
+You can now limit the actual traffic selector installed by adding a line
+`remote_ts = 10.84.0.0/16` (or any other subnet definition you like) into the
+children section on the same level as the `updown` one.
