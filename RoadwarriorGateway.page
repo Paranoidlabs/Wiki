@@ -1,0 +1,46 @@
+---
+title: Roadwarrior Gateway
+...
+
+You can configure strongswan to create a `Virtual Tunnel Interface` (VTI) and
+tunnel all traffic over that interface by using this updown script:
+
+```bash
+#!/usr/bin/bash
+
+set -o nounset
+set -o errexit
+
+VTI_IF="plabs0"
+
+case "${PLUTO_VERB}" in
+        up-client)
+                ip tunnel add "${VTI_IF}" local "${PLUTO_ME}" remote "${PLUTO_PEER}" mode vti \
+                        okey "${PLUTO_MARK_OUT%%/*}" ikey "${PLUTO_MARK_IN%%/*}"
+                ip link set "${VTI_IF}" up
+                ip addr add "${PLUTO_MY_SOURCEIP}" dev "${VTI_IF}"
+                ip route add `ip route get "${PLUTO_PEER}" | head -1`
+                ip route add "${PLUTO_PEER_CLIENT}" dev "${VTI_IF}"
+                sysctl -w "net.ipv4.conf.${VTI_IF}.disable_policy=1"
+                ;;
+        down-client)
+                ip tunnel delete "${VTI_IF}"
+                ip route del "${PLUTO_PEER}"
+                ;;
+esac
+```
+
+You can use this script by saving it as e.g. `/usr/lib/strongswan/plabs_updown`
+and changing this line in your `swanctl.conf`:
+
+```
+updown = /usr/lib/strongswan/_updown
+```
+
+to this line:
+
+```
+updown = /usr/lib/strongswan/plabs_updown
+```
+
+in your `children` section.
