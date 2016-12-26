@@ -1,0 +1,37 @@
+---
+title: Setting up a mGRE interface using systemd
+...
+
+Add these files to `/etc/systemd/network/` and change accordingly
+
+```
+loopback.network
+
+[Match]
+Name=lo
+
+[Network]
+Address=10.84.8.9/32
+```
+
+```
+plabs.netdev
+
+[NetDev]
+Description=PlabsVPN gre Interface
+Name=gre0
+Kind=gre
+
+[Tunnel]
+TTL=255
+DiscoverPathMTU=true
+```
+
+```
+plabs.network
+[Match]
+Name=gre0
+
+[Network]
+Address=10.84.4.4/21
+```
